@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const Admin = require('../Models/user');
 const config = require('../config/db');
 const session = require('express-session');
+const nodemailer = require('nodemailer');
 
 router.post('/register', (req, res) => {
     var newAdmin = new Admin({
@@ -24,9 +25,29 @@ router.post('/register', (req, res) => {
                 message
             });
         } else {
+            var transporter = nodemailer.createTransport({
+                service: 'Gmail',
+                auth: {
+                  user: 'your Email tsunamiittest@gmail.com',
+                  pass: " you Pssword xxxxxxxxxxx"
+                }
+              });
+              var mailOptions = {
+                from: 'your Email tsunamiittest@gmail.com',
+                to: req.body.email,
+                subject: ' Mail De Bienvenue',
+                html: "<p> Bonjour   "+ (req.body.nom) + ",<br> <p> Bienvenue  <B> <br><p> Vos infomrations de Login sont : <br><p> Email :  " +" "+ req.body.email +"<br><p> Mot De Passe : "+" "+ req.body.password
+              };
+              transporter.sendMail(mailOptions, function (error, info) {
+                if (error) {
+                  console.log(error);
+                } else {
+                  console.log('Email sent: ' + info.response);
+                }
+              });
             return res.json({
                 success: true,
-                message: "Admin a été ajouté avec succés."
+                message: "Formateur registration is successful."
             });
         }
     });
