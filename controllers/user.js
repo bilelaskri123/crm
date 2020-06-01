@@ -6,7 +6,8 @@ const Admin = require('../Models/user');
 const config = require('../config/db');
 const session = require('express-session');
 const nodemailer = require('nodemailer');
-
+var async = require('async');
+var crypto = require('crypto');
 router.post('/register', (req, res) => {
     var newAdmin = new Admin({
         nom:req.body.nom,
@@ -26,14 +27,14 @@ router.post('/register', (req, res) => {
             });
         } else {
             var transporter = nodemailer.createTransport({
-                service: 'Gmail',
+                service: 'gmail',
                 auth: {
-                  user: 'your Email tsunamiittest@gmail.com',
-                  pass: " you Pssword xxxxxxxxxxx"
+                  user: 'your email',
+                  pass: "your password"
                 }
               });
               var mailOptions = {
-                from: 'your Email tsunamiittest@gmail.com',
+                from: 'your email',
                 to: req.body.email,
                 subject: ' Mail De Bienvenue',
                 html: "<p> Bonjour   "+ (req.body.nom) + ",<br> <p> Bienvenue  <B> <br><p> Vos infomrations de Login sont : <br><p> Email :  " +" "+ req.body.email +"<br><p> Mot De Passe : "+" "+ req.body.password
@@ -161,4 +162,129 @@ router.put('/updateAdminById/:id',(req, res) =>{
 
 })
 
+
+router.post('/forgot', function(req, res, next) {
+    async.waterfall([
+      function(done) {
+        crypto.randomBytes(20, function(err, buf) {
+          var token = buf.toString('hex');
+          done(err, token);
+        });
+      },
+      function(token, done) {
+        Admin.findOne({ email: req.body.email }, function(err, user) {
+          if (!user) {
+          //   console.log('error', 'No account with that email address exists.');
+          req.flash('error', 'No account with that email address exists.');
+            return res.redirect('/forgot');
+          }
+  console.log('step 1')
+          user.resetPasswordToken = token;
+          user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+  
+          user.save(function(err) {
+            done(err, token, user);
+          });
+        });
+      },
+      function(token, user, done) {
+          console.log('step 2')
+  
+  
+        var smtpTrans = nodemailer.createTransport({
+           service: 'Gmail', 
+           auth: {
+            user: 'your email',
+            pass: 'your password '
+          }
+        });
+        var mailOptions = {
+  
+          to: user.email,
+          from: 'your email',
+          subject: 'Node.js Password Reset',
+          text: 'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
+            'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+            'http://' + req.headers.host + '/reset/' + token + '\n\n' +
+            'If you did not request this, please ignore this email and your password will remain unchanged.\n'
+  
+        };
+        console.log('step 3')
+  
+          smtpTrans.sendMail(mailOptions, function(err) {
+          req.flash('success', 'An e-mail has been sent to ' + user.email + ' with further instructions.');
+          console.log('sent')
+         // res.redirect('/forgot');
+          res.status(200)
+  });
+  }
+    ], function(err) {
+      console.log('this err' + ' ' + err)
+      //res.redirect('/');
+
+    });
+  });
+  
+
+
+router.post('/reset/:token', function(req, res) {
+    async.waterfall([
+      function(done) {
+        Admin.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } }, function(err, user, next) {
+          if (!user) {
+            req.flash('error', 'Password reset token is invalid or has expired.');
+            return res.redirect('back');
+          }
+  
+  
+          user.password = req.body.password;
+          user.resetPasswordToken = undefined;
+          user.resetPasswordExpires = undefined;
+          console.log('password' + user.password  + 'and the user is' + user)
+  
+  user.save(function(err) {
+    if (err) {
+        console.log('here')
+         return res.redirect('back');
+    } else { 
+        console.log('here2')
+      req.logIn(user, function(err) {
+        done(err, user);
+      });
+  
+    }
+          });
+        });
+      },
+  
+  
+  
+  
+  
+      function(user, done) {
+          // console.log('got this far 4')
+        var smtpTrans = nodemailer.createTransport({
+          service: 'Gmail',
+          auth: {
+            user: 'your email',
+            pass: 'your password'
+          }
+        });
+        var mailOptions = {
+          to: user.email,
+          from: 'your email',
+          subject: 'Your password has been changed',
+          text: 'Hello,\n\n' +
+            ' - This is a confirmation that the password for your account ' + user.email + ' has just been changed.\n'
+        };
+        smtpTrans.sendMail(mailOptions, function(err) {
+          // req.flash('success', 'Success! Your password has been changed.');
+          done(err);
+        });
+      }
+    ], function(err) {
+      res.redirect('/');
+    });
+  });
+ 
 module.exports = router;

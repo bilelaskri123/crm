@@ -26,6 +26,8 @@ const AdminSchema = mongoose.Schema({
         required: true 
 
     },
+    resetPasswordToken: String,
+  resetPasswordExpires: Date
   
 });
 
