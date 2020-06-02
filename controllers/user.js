@@ -11,6 +11,37 @@ var crypto = require('crypto');
 const { roles } = require('../config/roles');
 
 
+grantAccess = function(action, resource) {
+  return async (req, res, next)=> {
+    try {
+      const permission = roles.can(req.user.role)[action](resource);
+      if (!permission.granted) {
+        return res.status(401).json({
+          error : "you don't have enough permission to perform this action"
+        });
+      }
+      next();
+    }catch(error) {
+      next(error);
+    }
+  }
+};
+
+allowIfLoggedin = async (req, res, next) => {
+try {
+ const user = res.locals.loggedInUser;
+ if (!user)
+  return res.status(401).json({
+   error: "You need to be logged in to access this route"
+  });
+  req.user = user;
+  next();
+ } catch (error) {
+  next(error);
+ }
+}
+
+
 router.post('/register', (req, res) => {
     var newAdmin = new Admin({
         nom:req.body.nom,
@@ -33,8 +64,8 @@ router.post('/register', (req, res) => {
             var transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
-                  user: 'askribilel09@gmail.com',
-                  pass: "bilel123express#"
+                  user: 'your email',
+                  pass: "your password"
                 }
               });
               var mailOptions = {
@@ -119,7 +150,7 @@ router.get('/logout',(req,res) => {
 
 });
 
-router.get('/profile', passport.authenticate('jwt', {
+router.get('/profile', allowIfLoggedin , grantAccess('readAny', 'profile'),  passport.authenticate('jwt', {
     session: true
 }), (req, res) => {
     sess = req.session;
@@ -132,14 +163,14 @@ router.get('/profile', passport.authenticate('jwt', {
 });
 
 
-router.get('/getAdminById/:id', (req, res ) => {
+router.get('/getAdminById/:id', allowIfLoggedin , grantAccess('readAny' , 'profile') ,(req, res ) => {
     Admin.find( { _id: req.params.id },(err, docs) => {
         if (!err) { res.send(docs); }
         else { console.log('Erreur  :' + JSON.stringify(err, undefined, 2)); }
     });
 });
 
-router.get('/getAllAdmins', (eq, res) => {
+router.get('/getAllAdmins', allowIfLoggedin , (eq, res) => {
     Admin.find((err, docs) => {
         if (!err) { res.send(docs); }
         else { console.log('Erreur :' + JSON.stringify(err, undefined, 2)); }
@@ -147,7 +178,7 @@ router.get('/getAllAdmins', (eq, res) => {
 });
 
 
-router.put('/updateAdminById/:id',(req, res) =>{
+router.put('/updateAdminById/:id', allowIfLoggedin, (req, res) =>{
     let _id = req.params.id;
 
     Admin.findById(_id)
@@ -167,7 +198,7 @@ router.put('/updateAdminById/:id',(req, res) =>{
 })
 
 
-router.post('/forgot', function(req, res, next) {
+router.post('/forgot',allowIfLoggedin, function(req, res, next) {
     async.waterfall([
       function(done) {
         crypto.randomBytes(20, function(err, buf) {
@@ -292,34 +323,6 @@ router.post('/reset/:token', function(req, res) {
   });
 
 
-grantaccess = function(action, resource) {
-    return async (req, res, next)=> {
-      try {
-        const permission = roles.can(req.user.role)[action](resource);
-        if (!permission.granted) {
-          return res.status(401).json({
-            error : "you don't have enough permission to perform this action"
-          });
-        }
-        next();
-      }catch(error) {
-        next(error);
-      }
-    }
-};
 
-allowIfLoggedin = async (req, res, next) => {
-  try {
-   const user = res.locals.loggedInUser;
-   if (!user)
-    return res.status(401).json({
-     error: "You need to be logged in to access this route"
-    });
-    req.user = user;
-    next();
-   } catch (error) {
-    next(error);
-   }
- }
  
 module.exports = router;
