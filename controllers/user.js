@@ -8,11 +8,15 @@ const session = require('express-session');
 const nodemailer = require('nodemailer');
 var async = require('async');
 var crypto = require('crypto');
+const { roles } = require('../config/roles');
+
+
 router.post('/register', (req, res) => {
     var newAdmin = new Admin({
         nom:req.body.nom,
         email:req.body.email,
-        password: req.body.password
+        password: req.body.password,
+        role : req.body.role
     });
 
     Admin.addAdmin(newAdmin, (err, user) => {
@@ -29,8 +33,8 @@ router.post('/register', (req, res) => {
             var transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
-                  user: 'your email',
-                  pass: "your password"
+                  user: 'askribilel09@gmail.com',
+                  pass: "bilel123express#"
                 }
               });
               var mailOptions = {
@@ -60,7 +64,7 @@ router.post('/login', (req, res) => {
     const password = req.body.password;
 
     sess = req.session;
-	sess.email = req.body.email; 
+	  sess.email = req.body.email; 
     // console.log(sess);
 
     Admin.getAdminByEmail(email, (err, admin) => {
@@ -286,5 +290,36 @@ router.post('/reset/:token', function(req, res) {
       res.redirect('/');
     });
   });
+
+
+grantaccess = function(action, resource) {
+    return async (req, res, next)=> {
+      try {
+        const permission = roles.can(req.user.role)[action](resource);
+        if (!permission.granted) {
+          return res.status(401).json({
+            error : "you don't have enough permission to perform this action"
+          });
+        }
+        next();
+      }catch(error) {
+        next(error);
+      }
+    }
+};
+
+allowIfLoggedin = async (req, res, next) => {
+  try {
+   const user = res.locals.loggedInUser;
+   if (!user)
+    return res.status(401).json({
+     error: "You need to be logged in to access this route"
+    });
+    req.user = user;
+    next();
+   } catch (error) {
+    next(error);
+   }
+ }
  
 module.exports = router;

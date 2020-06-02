@@ -1,5 +1,5 @@
 module.exports = {
-    db: 'mongodb://localhost/CRM',
+    db: 'mongodb://localhost:27017/CRM',
     secret: 'cccdzdazzegehe'
 
 }

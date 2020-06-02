@@ -6,29 +6,34 @@ const uniqueValidator = require('mongoose-unique-validator');
 const AdminSchema = mongoose.Schema({
 
 
-    nom:{
-        type:String,
-        require:true
+    nom: {
+        type: String,
+        require: true
     },
-    prenom:{
-        type:String,
-        require:true
+    prenom: {
+        type: String,
+        require: true
     },
-   
+
     email: {
         type: String,
         unique: true,
-        required: true 
+        required: true
     },
     password: {
         type: String,
         unique: true,
-        required: true 
+        required: true
 
     },
+    role: {
+        type: String,
+        default: 'basic',
+        enum: ["basic", "supervisor", "admin"]
+    },
     resetPasswordToken: String,
-  resetPasswordExpires: Date
-  
+    resetPasswordExpires: Date
+
 });
 
 
@@ -58,19 +63,19 @@ module.exports.getAdminByEmail = function (email, callback) {
     Admin.findOne(query, callback);
 },
 
-// Créer compte Admin
+    // Créer compte Admin
 
-module.exports.addAdmin = function(newAdmin,callback){
-    bcrypt.genSalt(10, (err, salt) => {
-        
+    module.exports.addAdmin = function (newAdmin, callback) {
+        bcrypt.genSalt(10, (err, salt) => {
 
-        bcrypt.hash(newAdmin.password , salt,(err,hash)=>{
-            if(err) throw (err);
-            newAdmin.password = hash;
-            newAdmin.save(callback);
+
+            bcrypt.hash(newAdmin.password, salt, (err, hash) => {
+                if (err) throw (err);
+                newAdmin.password = hash;
+                newAdmin.save(callback);
+            });
         });
-    });
-}
+    }
 // Comparer les mots de passe
 module.exports.comparePassword = function (password, hash, callback) {
     bcrypt.compare(password, hash, (err, isMatch) => {
