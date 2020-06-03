@@ -8,6 +8,7 @@ const session = require('express-session');
 const morgan = require('morgan');
 
 const PORT = process.env.PORT || 3002;
+const userRouter = require('./controllers/user.router');
 
 var sess;
 const config = require('./config/db');
@@ -65,7 +66,7 @@ app.use(async (req, res, next) => {
 
 app.use(checkUserType);
 
-
+app.use("/", userRouter);
 const user = require("./controllers/user")
 app.use('/api/user', user);
 
